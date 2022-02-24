@@ -38,6 +38,8 @@ public class GuardAI : MonoBehaviour
     [Tooltip("How long it takes to reset accuracy in seconds")] public float accuracyResetTime = 5;
     [Tooltip("How much more accurate each shot is(between 1-0, 0 is more accurate)")] public float accuracyGain;
     float timeSinceLastShot;
+    float wait;
+    [Tooltip("How long they will search in investigate state")] public float timeToWaitInvestigate;
     // Start is called before the first frame update
     void Start()
     {
@@ -56,10 +58,10 @@ public class GuardAI : MonoBehaviour
     }
     void ShootAtPoint(Vector3 pointToShootAt, float accuracy)
     {
-        //make shoot at point
-        //have random number generated between 0 and attackAccuracy
-        Random.Range(0, attackAccuracy);
+        attackAccuracy = accuracy;
+        Random.Range(0, attackAccuracy);//have random number generated between 0 and attackAccuracy (use to modulate projectile trajectory)
         //spawn projectile and add the random number to the velociy on x or y or both
+
         //make each succesive shot more accurate
         if (attackAccuracy - accuracyGain < 0)
             attackAccuracy = 0;
@@ -92,6 +94,7 @@ public class GuardAI : MonoBehaviour
                 CurrentDetection += Time.deltaTime / unDetectionDivider;
             }
         }
+        //make time since last shot go up slowly and reset attackaccuracy
         if (timeSinceLastShot < attackDelay)
         {
             timeSinceLastShot += Time.deltaTime;
@@ -119,15 +122,21 @@ public class GuardAI : MonoBehaviour
                 }
                 break;
             case 2://investigate
-                //looks back and forth in a x degree area
+                //looks back and forth in a x degree area (use a sine wave?)
+
                 //if player was a prop and prop is spotted attack prop
                 if (playerWasProp == true && propSpotted)
                 {
-                    ShootAtPoint(prop.transform.position, 1f);
+                    ShootAtPoint(prop.transform.position, 0f);
                 }
                 //wait for x time
-                //if nothing found return to patrol
-                State = 1;
+                if (wait > timeToWaitInvestigate)
+                {
+                    //if nothing found return to patrol
+                    State = 1;
+                }
+                else
+                    wait += Time.deltaTime;
                 break;
             case 3://chase
                 MoveToPoint(LastKnownPlayerPos);
