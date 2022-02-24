@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+
 //States Key
 //0 = idle
 //stare in a direction
@@ -40,6 +41,7 @@ public class GuardAI : MonoBehaviour
     float timeSinceLastShot;
     float wait;
     [Tooltip("How long they will search in investigate state")] public float timeToWaitInvestigate;
+    [Tooltip("Angle guard will look between during investigate state")] public float searchAngle;
     // Start is called before the first frame update
     void Start()
     {
@@ -123,7 +125,7 @@ public class GuardAI : MonoBehaviour
                 break;
             case 2://investigate
                 //looks back and forth in a x degree area (use a sine wave?)
-
+                float temp = Mathf.Sin(wait) * searchAngle;
                 //if player was a prop and prop is spotted attack prop
                 if (playerWasProp == true && propSpotted)
                 {
