@@ -26,10 +26,18 @@ public class GuardAI : MonoBehaviour
     public float unDetectionDivider = 1;
     public GuardVisionCone PeripheralVisionCone;
     public GuardVisionCone MainVisionCone;
-    public GameObject[] Nodes;
+    [Tooltip("The points the guard will travel to")] public GameObject[] Nodes;
     int CurrentNodeNumber = 0;
     bool playerWasProp;
     [HideInInspector] public int LastSeenPropID = 0; // 0 = null prop
+    [HideInInspector] public bool propSpotted;
+    [HideInInspector] public GameObject prop;
+    float attackDelay;
+    [Tooltip("How accurate first shot is")] public float FirstAttackAccuracy;
+    float attackAccuracy = .5f;
+    [Tooltip("How long it takes to reset accuracy in seconds")] public float accuracyResetTime = 5;
+    [Tooltip("How much more accurate each shot is(between 1-0, 0 is more accurate)")] public float accuracyGain;
+    float timeSinceLastShot;
     // Start is called before the first frame update
     void Start()
     {
@@ -40,18 +48,23 @@ public class GuardAI : MonoBehaviour
     }
     void MoveToPoint(Vector3 posToMove)
     { 
-        //make later lmao
         //move to point return when there
     }
     void LookAtPoint(Vector3 pointToLookAt)
     {
-        //make later lmao
         //face direction of a vector3
     }
-    void ShootAtPoint(Vector3 pointToShootAt)
+    void ShootAtPoint(Vector3 pointToShootAt, float accuracy)
     {
-        //make later lmao
         //make shoot at point
+        //have random number generated between 0 and attackAccuracy
+        Random.Range(0, attackAccuracy);
+        //spawn projectile and add the random number to the velociy on x or y or both
+        //make each succesive shot more accurate
+        if (attackAccuracy - accuracyGain < 0)
+            attackAccuracy = 0;
+        else
+            attackAccuracy -= accuracyGain;
     }
     void Update()
     {
@@ -62,11 +75,13 @@ public class GuardAI : MonoBehaviour
         //check peripheral vision
         if (PeripheralVisionCone.isInVision == true && MainVisionCone.isInVision == false)
         {
+            LastKnownPlayerPos = player.transform.position;
             CurrentDetection -= Time.deltaTime / peripheralDetectionDivider;
         }
         //check main vision
         else if (MainVisionCone.isInVision == true)
         {
+            LastKnownPlayerPos = player.transform.position;
             CurrentDetection -= Time.deltaTime / mainDetectionDivider;
         }
         //reset CurrentDetection slowly
@@ -75,6 +90,14 @@ public class GuardAI : MonoBehaviour
             if (CurrentDetection < DetectionTime)
             {
                 CurrentDetection += Time.deltaTime / unDetectionDivider;
+            }
+        }
+        if (timeSinceLastShot < attackDelay)
+        {
+            timeSinceLastShot += Time.deltaTime;
+            if (timeSinceLastShot > accuracyResetTime)
+            {
+                attackAccuracy = FirstAttackAccuracy;
             }
         }
         switch (State)
@@ -97,17 +120,12 @@ public class GuardAI : MonoBehaviour
                 break;
             case 2://investigate
                 //looks back and forth in a x degree area
-                if (PeripheralVisionCone.isInVision == true || MainVisionCone.isInVision == true) //check for player in view
-                {
-                    State = 4;//set state to attack
-                }
                 //if player was a prop and prop is spotted attack prop
-                if (playerWasProp == true)
-                { 
-                
+                if (playerWasProp == true && propSpotted)
+                {
+                    ShootAtPoint(prop.transform.position, 1f);
                 }
                 //wait for x time
-
                 //if nothing found return to patrol
                 State = 1;
                 break;
@@ -120,20 +138,21 @@ public class GuardAI : MonoBehaviour
                 else
                     State = 2;// go to investigate if player isnt found
                 break;
-            case 4://attack
+            case 4://attack                
                 LastKnownPlayerPos = player.transform.position;
                 RaycastHit hit = new RaycastHit();
                 Vector3 direction = player.transform.position - transform.position;
                 Physics.Raycast(transform.position, direction, out hit);
-                //attack if in certain radius
-                if (Vector3.Distance(player.transform.position, transform.position) < attackRadius)
-                    ShootAtPoint(LastKnownPlayerPos);
-                else if (hit.collider.gameObject.tag != "Player")
+                if (hit.collider.gameObject.tag != "Player")
                 {
                     State = 3;//go to chase state because player is behind object
                 }
-
-            break;
+                //attack if in certain radius
+                else if (Vector3.Distance(player.transform.position, transform.position) < attackRadius && timeSinceLastShot >= attackDelay)
+                {
+                    ShootAtPoint(LastKnownPlayerPos, attackAccuracy);                    
+                }
+                break;
         }
     }    
 }
