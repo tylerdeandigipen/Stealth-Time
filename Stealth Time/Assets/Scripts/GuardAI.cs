@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 //States Key
 //0 = idle
@@ -16,6 +17,8 @@ using UnityEngine;
 public class GuardAI : MonoBehaviour
 {
     private GameObject player;
+    private NavMeshAgent agent;
+    public float RotationSpeed;
     [HideInInspector] public Vector3 LastKnownPlayerPos;
     private float DetectionTime = 3f;
     private float CurrentDetection;
@@ -45,18 +48,23 @@ public class GuardAI : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        agent = this.GetComponent<NavMeshAgent>();
         player = FindObjectOfType<movement>().gameObject;
         LastKnownPlayerPos = this.transform.position;
         CurrentDetection = DetectionTime;
         Nodes[0].GetComponent<Node>().IsIdleNode = false; //idiot protection
     }
     void MoveToPoint(Vector3 posToMove)
-    { 
-        //move to point return when there
+    {
+        agent.SetDestination(posToMove);
     }
     void LookAtPoint(Vector3 pointToLookAt)
     {
-        //face direction of a vector3
+        Vector3 direction = (pointToLookAt - transform.position).normalized;
+        //create the rotation we need to be in to look at the target
+        Quaternion lookRotation = Quaternion.LookRotation(direction);
+        //rotate over time according to speed until rotated
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * RotationSpeed);
     }
     void ShootAtPoint(Vector3 pointToShootAt, float accuracy)
     {
@@ -110,22 +118,34 @@ public class GuardAI : MonoBehaviour
             case 0://idle in patrol
                 LookAtPoint(Nodes[CurrentNodeNumber - 1].GetComponent<Node>().PointToLookAt);//do not set node 0 to be idle
                 //wait for x seconds
-                State = 1;//go back to patrol
+                if (wait > timeToWaitInvestigate)
+                {
+                    //if nothing found return to patrol
+                    State = 1;
+                }
+                else
+                    wait += Time.deltaTime;
                 break;
             case 1://patrol
                 MoveToPoint(Nodes[CurrentNodeNumber].transform.position);
-                if (Nodes[CurrentNodeNumber].GetComponent<Node>().IsIdleNode == true)
+                if (Vector3.Distance(transform.position, Nodes[CurrentNodeNumber].transform.position) > .1f)//magic number is so does not have to be exactly on node to go to next one
                 {
                     if (CurrentNodeNumber + 1 > Nodes.Length)
                     {
+                        if (Nodes[CurrentNodeNumber].GetComponent<Node>().IsIdleNode == true)
+                        {
+                            State = 0; // go to idle if node is set to idle
+                        }
                         CurrentNodeNumber += 1;
-                        State = 0;
                     }
+                    else
+                        CurrentNodeNumber = Nodes.Length;                    
                 }
                 break;
             case 2://investigate
-                //looks back and forth in a x degree area (use a sine wave?)
+                //looks back and forth in a x degree area
                 float temp = Mathf.Sin(wait) * searchAngle;
+                transform.rotation *= Quaternion.Euler(0, temp, 0); // rotate based on above line
                 //if player was a prop and prop is spotted attack prop
                 if (playerWasProp == true && propSpotted)
                 {
@@ -159,9 +179,9 @@ public class GuardAI : MonoBehaviour
                     State = 3;//go to chase state because player is behind object
                 }
                 //attack if in certain radius
-                else if (Vector3.Distance(player.transform.position, transform.position) < attackRadius && timeSinceLastShot >= attackDelay)
+                else if (timeSinceLastShot >= attackDelay) //check for distance may use laterVector3.Distance(player.transform.position, transform.position) < attackRadius && 
                 {
-                    ShootAtPoint(LastKnownPlayerPos, attackAccuracy);                    
+                    ShootAtPoint(LastKnownPlayerPos, attackAccuracy);
                 }
                 break;
         }
