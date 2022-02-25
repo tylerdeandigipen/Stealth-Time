@@ -16,6 +16,7 @@ using UnityEngine.AI;
 //shoot at the player
 public class GuardAI : MonoBehaviour
 {
+    public float movementErrorRadius;
     private GameObject player;
     private NavMeshAgent agent;
     public float RotationSpeed;
@@ -23,7 +24,7 @@ public class GuardAI : MonoBehaviour
     private float DetectionTime = 3f;
     private float CurrentDetection;
     [HideInInspector] public bool isInVision = false;
-    int State = 0;
+    int State = 1;
     public float attackRadius;
     public float peripheralDetectionDivider = 1;
     public float mainDetectionDivider = 1;
@@ -57,6 +58,7 @@ public class GuardAI : MonoBehaviour
     void MoveToPoint(Vector3 posToMove)
     {
         agent.SetDestination(posToMove);
+        LookAtPoint(posToMove);
     }
     void LookAtPoint(Vector3 pointToLookAt)
     {
@@ -128,9 +130,9 @@ public class GuardAI : MonoBehaviour
                 break;
             case 1://patrol
                 MoveToPoint(Nodes[CurrentNodeNumber].transform.position);
-                if (Vector3.Distance(transform.position, Nodes[CurrentNodeNumber].transform.position) > .1f)//magic number is so does not have to be exactly on node to go to next one
+                if (Vector3.Distance(transform.position, Nodes[CurrentNodeNumber].transform.position) < movementErrorRadius)
                 {
-                    if (CurrentNodeNumber + 1 > Nodes.Length)
+                    if (CurrentNodeNumber + 1 < Nodes.Length)
                     {
                         if (Nodes[CurrentNodeNumber].GetComponent<Node>().IsIdleNode == true)
                         {
@@ -139,7 +141,7 @@ public class GuardAI : MonoBehaviour
                         CurrentNodeNumber += 1;
                     }
                     else
-                        CurrentNodeNumber = Nodes.Length;                    
+                        CurrentNodeNumber = 0;                    
                 }
                 break;
             case 2://investigate

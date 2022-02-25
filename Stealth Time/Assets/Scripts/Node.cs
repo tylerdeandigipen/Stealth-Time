@@ -10,7 +10,8 @@ public class Node : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        PointToLookAt = LookDirection.transform.position;
+        if(LookDirection != null)
+            PointToLookAt = LookDirection.transform.position;
     }
 
     // Update is called once per frame
