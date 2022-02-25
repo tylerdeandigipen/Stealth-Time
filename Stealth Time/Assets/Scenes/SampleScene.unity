@@ -282,8 +282,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f8905df8195f36e4da845a5256f942eb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  movementErrorRadius: 3
-  RotationSpeed: 1
+  movementErrorRadius: 2
+  RotationSpeed: 2
   LastKnownPlayerPos: {x: 0, y: 0, z: 0}
   isInVision: 0
   attackRadius: 5
